@@ -96,13 +96,26 @@ class SafariBooksSpider(scrapy.spiders.Spider):
                 headers={
                     'User-Agent':'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/45.0.2454.85 Safari/537.36'
                 })
+        if self.user[-8:].lower == '@acm.org':
+            return scrapy.FormRequest.from_response(
+                response,
+                formdata={'email': self.user, 'password1': ''},
+                callback=self.acm_login
+            )
+        else:
+            return scrapy.FormRequest.from_response(
+                response,
+                formdata={'email': self.user, 'password1': self.password},
+                callback=self.after_login
+            )
 
+    def acm_login(self, response):
+        self.logger.info('Using ACM account login')
         return scrapy.FormRequest.from_response(
-              response,
-              formdata={'email': self.user, 'password1': self.password},
-              callback=self.after_login
-        )
-
+                response,
+                formdata={'username': self.user, 'password': self.password},
+                callback=self.after_login
+            )
 
     def after_login(self, response):
         # Loose rule to decide if user signed in successfully.
