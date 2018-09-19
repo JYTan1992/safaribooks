@@ -96,7 +96,7 @@ class SafariBooksSpider(scrapy.spiders.Spider):
                 headers={
                     'User-Agent':'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/45.0.2454.85 Safari/537.36'
                 })
-        if self.user[-8:].lower == '@acm.org':
+        if self.user[-8:].lower() == '@acm.org':
             return scrapy.FormRequest.from_response(
                 response,
                 formdata={'email': self.user, 'password1': ''},
@@ -111,11 +111,21 @@ class SafariBooksSpider(scrapy.spiders.Spider):
 
     def acm_login(self, response):
         self.logger.info('Using ACM account login')
-        return scrapy.FormRequest.from_response(
-                response,
-                formdata={'username': self.user, 'password': self.password},
-                callback=self.after_login
-            )
+        # from scrapy.shell import inspect_response
+        # inspect_response(response, self)
+        if response.xpath("//button[text()='Login']").extract_first():
+        #first step, login. POST ACM username and password
+            return scrapy.FormRequest.from_response(
+                    response,
+                    formdata={'j_username': self.user[:-8], 'j_password': self.password},
+                    callback=self.acm_login
+                )
+        else:
+        #second step, click 'Continue' button for disable JS
+            return scrapy.FormRequest.from_response(
+                    response,
+                    callback=self.after_login
+                )
 
     def after_login(self, response):
         # Loose rule to decide if user signed in successfully.
@@ -178,7 +188,7 @@ class SafariBooksSpider(scrapy.spiders.Spider):
         self.style += response.body
 
 
-    def parse_page(self, title, bookid, path, images, style, response):
+    def parse_page(self, title, bookid, path, images, style, response):     
         template = Template(PAGE_TEMPLATE)
 
         # path might have nested directory
